@@ -7,7 +7,7 @@ type Report struct {
 
 // Work struct
 type Work struct {
-	GUID      string `xml:"gid"`
+	WorkID    string `xml:"id"`
 	Title     string `xml:"name"`
 	Precision string `xml:"precision"`
 }
