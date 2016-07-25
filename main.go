@@ -3,16 +3,17 @@ package main
 import (
 	"bytes"
 	"encoding/xml"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
+	"time"
 )
 
 func main() {
-	// response, _ := http.Get("http://www.animenewsnetwork.com/encyclopedia/reports.xml?id=155&nlist=all")
-	response, _ := http.Get("http://www.animenewsnetwork.com/encyclopedia/reports.xml?id=155")
+	response, _ := http.Get("http://www.animenewsnetwork.com/encyclopedia/reports.xml?id=155&nlist=all")
+	// response, _ := http.Get("http://www.animenewsnetwork.com/encyclopedia/reports.xml?id=155")
 
 	xmlFile, _ := ioutil.ReadAll(response.Body)
 
@@ -30,13 +31,14 @@ func main() {
 	for _, element := range report.Works {
 		collection.Insert(element)
 	}
-
-	populateWorkDetails(report.Works[:])
-
 	session.Close()
+
+	var wg sync.WaitGroup
+	populateWorkDetails(report.Works[:], &wg)
+	wg.Wait()
 }
 
-func populateWorkDetails(works []Work) {
+func populateWorkDetails(works []Work, wg *sync.WaitGroup) {
 	if len(works) == 0 {
 		return
 	}
@@ -47,14 +49,19 @@ func populateWorkDetails(works []Work) {
 		continueSaving = false
 	}
 
-	saveWorkDetails(works[:sliceSize])
+	go getDetailsWorker(works[:sliceSize], wg)
+
+	time.Sleep(time.Second)
 
 	if continueSaving {
-		populateWorkDetails(works[sliceSize:])
+		populateWorkDetails(works[sliceSize:], wg)
 	}
 }
 
-func saveWorkDetails(works []Work) {
+func getDetailsWorker(works []Work, wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
+
 	var url bytes.Buffer
 	url.WriteString("http://cdn.animenewsnetwork.com/encyclopedia/api.xml?title=")
 	for _, element := range works {
@@ -63,5 +70,21 @@ func saveWorkDetails(works []Work) {
 	}
 
 	response, _ := http.Get(url.String())
-	fmt.Println(response)
+
+	xmlFile, _ := ioutil.ReadAll(response.Body)
+
+	var detailsReport DetailsReport
+	xml.Unmarshal(xmlFile, &detailsReport)
+
+	session, err := getDatabaseSession()
+	if err != nil {
+		log.Fatal("Error connecting to database")
+	}
+
+	collection := getDetailsCollection(session)
+	for _, element := range detailsReport.Anime {
+		collection.Insert(element)
+	}
+
+	response.Body.Close()
 }

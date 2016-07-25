@@ -22,3 +22,19 @@ func getWorksCollection(session *mgo.Session) (collection *mgo.Collection) {
 
 	return
 }
+
+func getDetailsCollection(session *mgo.Session) (collection *mgo.Collection) {
+	collection = session.DB("animanga-go").C("workDetails")
+
+	index := mgo.Index{
+		Key:        []string{"workid"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+
+	collection.EnsureIndex(index)
+
+	return
+}
