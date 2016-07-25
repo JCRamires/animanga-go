@@ -12,8 +12,8 @@ import (
 )
 
 func main() {
-	response, _ := http.Get("http://www.animenewsnetwork.com/encyclopedia/reports.xml?id=155&nlist=all")
-	// response, _ := http.Get("http://www.animenewsnetwork.com/encyclopedia/reports.xml?id=155")
+	// response, _ := http.Get("http://www.animenewsnetwork.com/encyclopedia/reports.xml?id=155&nlist=all")
+	response, _ := http.Get("http://www.animenewsnetwork.com/encyclopedia/reports.xml?id=155")
 
 	xmlFile, _ := ioutil.ReadAll(response.Body)
 
@@ -85,6 +85,10 @@ func getDetailsWorker(works []Work, wg *sync.WaitGroup) {
 	for _, element := range detailsReport.Anime {
 		collection.Insert(element)
 	}
+
+	// for _, element := range detailsReport.Manga {
+	// 	collection.Insert(element)
+	// }
 
 	response.Body.Close()
 }
